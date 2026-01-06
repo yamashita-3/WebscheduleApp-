@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>スケジュール管理モック</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="app__header">
+        <h1 class="app__title">スケジュール管理（モック）</h1>
+        <p class="app__subtitle">いま手に持っているタスクを書き込み、終わったものから消していく</p>
+      </header>
+
+      <section class="add-task">
+        <form id="add-form" autocomplete="off">
+          <label class="sr-only" for="task-input">タスク名</label>
+          <input id="task-input" type="text" placeholder="タスクを入力して Enter または ＋" required list="task-suggestions" />
+          <label class="sr-only" for="task-memo">メモ</label>
+          <input id="task-memo" type="text" placeholder="メモ（任意）" />
+          <button type="submit" class="btn btn--primary" aria-label="タスクを追加">＋</button>
+        </form>
+        <datalist id="task-suggestions"></datalist>
+        <small class="hint">各タスクは「追加日」を表示します。完了すると「完了日」も表示されます。</small>
+      </section>
+
+      <main class="lists">
+        <section class="panel">
+          <div class="panel__head">
+            <h2>進行中</h2>
+            <span id="count-in-progress" class="count-badge">0</span>
+          </div>
+          <ul id="in-progress-list" class="task-list" aria-live="polite"></ul>
+        </section>
+
+        <section class="panel">
+          <div class="panel__head">
+            <h2>完了</h2>
+            <span id="count-completed" class="count-badge">0</span>
+          </div>
+          <ul id="completed-list" class="task-list" aria-live="polite"></ul>
+        </section>
+
+        <section class="panel panel--someday">
+          <div class="panel__head">
+            <h2>いつかやりたいこと</h2>
+            <span id="count-someday" class="count-badge">0</span>
+          </div>
+          <ul id="someday-list" class="task-list" aria-live="polite"></ul>
+        </section>
+      </main>
+
+      <footer class="app__footer">
+        <small>このモックはブラウザのLocalStorageにデータを自動保存します（同一端末・同一ブラウザで有効）。</small>
+      </footer>
+    </div>
+
+    <script defer src="app.js"></script>
+  </body>
+</html>
