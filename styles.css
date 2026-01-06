@@ -1,0 +1,152 @@
+/* Basic reset */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", "YuGothic", Meiryo, "Helvetica Neue", Arial, sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.app { max-width: 960px; margin: 0 auto; padding: 24px; }
+
+.app__header { margin-bottom: 20px; }
+.app__title { margin: 0 0 4px; font-size: 24px; }
+.app__subtitle { margin: 0; color: #475569; font-size: 14px; }
+
+.add-task { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+#add-form { display: flex; gap: 8px; }
+#task-input {
+  flex: 1;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  outline: none;
+  font-size: 16px;
+}
+#task-memo {
+  flex: 1;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  outline: none;
+  font-size: 16px;
+}
+#task-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+.add-task input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+.btn { cursor: pointer; border: none; padding: 10px 14px; border-radius: 10px; font-size: 16px; }
+.btn--primary { background: #3b82f6; color: white; }
+.btn--ghost { background: transparent; color: #334155; border: 1px solid #cbd5e1; }
+.hint { color: #64748b; display: inline-block; margin-top: 8px; }
+
+.lists { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 800px) { .lists { grid-template-columns: 1fr 1fr; } }
+
+@media (min-width: 800px) {
+  .panel--someday { grid-column: 1 / -1; }
+}
+
+.panel { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; }
+.panel__head { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 10px; }
+.panel h2 { margin: 0; font-size: 18px; }
+.count-badge { background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+
+.task-list { list-style: none; margin: 0; padding: 4px 0; display: grid; gap: 10px; min-height: 40px; }
+.task-list { position: relative; }
+.task {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 12px;
+  align-items: start;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+}
+.task__title { margin: 0; font-weight: 600; }
+.task__meta { color: #64748b; font-size: 12px; }
+.task__memo { color: #475569; font-size: 13px; margin-top: 6px; white-space: pre-wrap; }
+.task__actions { display: flex; gap: 8px; }
+.task--completed { opacity: 0.85; background: #f8fafc; }
+.task--completed .task__title { text-decoration: line-through; color: #475569; }
+
+/* Someday tasks visual */
+.task--someday {
+  background: #fef9c3; /* light yellow */
+  border-color: #fde68a;
+}
+
+.panel--someday .task__title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* DnD visual cues */
+.task-list.droppable--over {
+  background: #f0f9ff;
+}
+.task.dragging { opacity: 0.6; }
+
+/* Drop indicator line */
+.drop-indicator {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: #3b82f6;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* Week grouping header */
+.week-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-weight: 600;
+  color: #334155;
+}
+
+/* Completed weeks accordion */
+.week-group-item { list-style: none; margin: 0; padding: 0; }
+.week-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #334155;
+  cursor: pointer;
+}
+.week-group { list-style: none; margin: 8px 0 16px; padding: 0; display: grid; gap: 10px; }
+.week-group.is-closed { display: none; }
+
+/* Inline edit form inside task */
+.task-edit {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.task-edit input,
+.task-edit textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+.task-edit textarea { min-height: 72px; resize: vertical; }
+.task-edit input:focus,
+.task-edit textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+.app__footer { margin-top: 24px; color: #64748b; }
