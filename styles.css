@@ -37,6 +37,8 @@ body {
 .btn { cursor: pointer; border: none; padding: 10px 14px; border-radius: 10px; font-size: 16px; }
 .btn--primary { background: #3b82f6; color: white; }
 .btn--ghost { background: transparent; color: #334155; border: 1px solid #cbd5e1; }
+.btn--xs { padding: 4px 8px; font-size: 12px; border-radius: 8px; }
+.btn--icon { padding: 2px 6px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
 .hint { color: #64748b; display: inline-block; margin-top: 8px; }
 
 .lists { display: grid; grid-template-columns: 1fr; gap: 16px; }
@@ -50,6 +52,101 @@ body {
 .panel__head { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 10px; }
 .panel h2 { margin: 0; font-size: 18px; }
 .count-badge { background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+
+/* Daily habits */
+.panel--habits { margin-bottom: 16px; }
+.habits { display: grid; gap: 12px; }
+.habits__progress { display: grid; gap: 8px; }
+.habits__message { color: #334155; font-weight: 600; }
+
+.progress {
+  height: 12px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+.progress__fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #22c55e, #3b82f6);
+  border-radius: 999px;
+  transition: width 160ms ease;
+}
+
+/* Habits cards: wide rows */
+.habits__checks { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 640px) { .habits__checks { grid-template-columns: 1fr 1fr 1fr; } }
+.habit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  position: relative;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+.habit input { width: 18px; height: 18px; }
+.habit__text { font-weight: 600; }
+.habit__actions { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.habit__btn { min-width: 26px; }
+.habit--add { justify-content: center; border-style: dashed; color: #3b82f6; background: #f0f9ff; }
+.habit__add { font-size: 18px; line-height: 1; }
+.habit.is-done {
+  background: linear-gradient(90deg, #ecfdf5, #eef2ff);
+  border-color: #86efac;
+  box-shadow: 0 10px 22px rgba(34, 197, 94, 0.12);
+}
+.habit.is-done .habit__text {
+  text-decoration: line-through;
+  color: #065f46;
+}
+.habit.is-done::after {
+  content: "✓";
+  position: absolute;
+  right: 64px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #22c55e;
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(34, 197, 94, 0.25);
+}
+
+.habits__stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.habit-stat { border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; background: #f8fafc; }
+.habit-stat__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.habit-stat__label { color: #64748b; font-size: 12px; }
+.habit-stat__value { font-weight: 700; font-size: 18px; }
+
+/* Week stamps */
+.habits__week { display: grid; gap: 8px; }
+.habits__week-head { color: #334155; font-weight: 700; font-size: 14px; }
+.habits__stamps { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.stamp {
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  position: relative;
+  overflow: hidden;
+}
+.stamp__fill { position: absolute; inset: 0; width: 0%; background: linear-gradient(90deg, #60a5fa, #3b82f6); transition: width 180ms ease; }
+.stamp__label { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; color: #111827; font-weight: 400; text-shadow: none; }
+
+/* Full completion day: celebratory look */
+.stamp--full {
+  border-color: #3b82f6;
+  background: #e0f2fe;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
+}
+.stamp--full .stamp__label { color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
 
 .task-list { list-style: none; margin: 0; padding: 4px 0; display: grid; gap: 10px; min-height: 40px; }
 .task-list { position: relative; }

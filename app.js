@@ -12,6 +12,16 @@
     completed: [],
     someday: [],
     expandedWeeks: {},
+    habits: {
+      dateKey: null,
+      // items: [{ id, label, legacyKey? }]
+      items: [],
+      // checks: { [itemId]: boolean }
+      checks: {},
+      achievedDates: [],
+      dailyPercents: {},
+      overrides: { totalDays: null, streak: null },
+    },
   };
 
   const STORAGE_KEY = 'schedule_mock_state_v1';
@@ -30,6 +40,7 @@
         completed: toJson(state.completed),
         someday: toJson(state.someday),
         expandedWeeks: state.expandedWeeks || {},
+        habits: state.habits || {},
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (_) {
@@ -53,9 +64,59 @@
       state.completed = parseArr(data.completed);
       state.someday = parseArr(data.someday);
       state.expandedWeeks = data.expandedWeeks || {};
+      if (data.habits) {
+        const loadedItems = Array.isArray(data.habits.items) ? data.habits.items : [];
+        const normalizedItems = loadedItems
+          .filter((x) => x && typeof x === 'object')
+          .map((x) => ({
+            id: String(x.id || ''),
+            label: String(x.label || ''),
+            legacyKey: x.legacyKey != null ? String(x.legacyKey) : undefined,
+          }))
+          .filter((x) => x.id && x.label);
+
+        const loadedChecks = (data.habits.checks && typeof data.habits.checks === 'object') ? data.habits.checks : {};
+        const normalizedChecks = {};
+        for (const [k, v] of Object.entries(loadedChecks)) {
+          normalizedChecks[String(k)] = !!v;
+        }
+
+        state.habits = {
+          dateKey: data.habits.dateKey || null,
+          items: normalizedItems,
+          checks: normalizedChecks,
+          achievedDates: Array.isArray(data.habits.achievedDates) ? data.habits.achievedDates : [],
+          dailyPercents: (data.habits.dailyPercents && typeof data.habits.dailyPercents === 'object') ? data.habits.dailyPercents : {},
+          overrides: (data.habits.overrides && typeof data.habits.overrides === 'object') ? { totalDays: data.habits.overrides.totalDays ?? null, streak: data.habits.overrides.streak ?? null } : { totalDays: null, streak: null },
+        };
+      }
     } catch (_) {
       // ignore load errors
     }
+  }
+
+  function defaultHabitItems() {
+    return [
+      { id: 'overseas', label: '海外記事', legacyKey: 'overseas' },
+      { id: 'audio', label: '音声配信', legacyKey: 'audio' },
+      { id: 'gym', label: 'ジムへ行く', legacyKey: 'gym' },
+      { id: 'nc1', label: 'Native Camp１回目', legacyKey: 'nc1' },
+      { id: 'nc2', label: 'Native Camp２回目', legacyKey: 'nc2' },
+    ];
+  }
+
+  function ensureHabitItems() {
+    if (Array.isArray(state.habits.items) && state.habits.items.length > 0) return;
+
+    // Migration from legacy object checks (if any)
+    const legacy = (state.habits.checks && typeof state.habits.checks === 'object') ? state.habits.checks : {};
+    state.habits.items = defaultHabitItems();
+    const checks = {};
+    for (const it of state.habits.items) {
+      checks[it.id] = !!legacy[it.legacyKey || it.id];
+    }
+    state.habits.checks = checks;
+    saveState();
   }
 
   const el = {
@@ -236,7 +297,306 @@
     el.countCompleted.textContent = String(state.completed.length);
     el.countSomeday.textContent = String(state.someday.length);
 
+    renderHabits();
     updateSuggestions();
+  }
+
+  // ===== Daily Habits =====
+  function pad2(n) {
+    return String(n).padStart(2, '0');
+  }
+
+  function todayKeyLocal() {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  }
+
+  function dateKeyFromDate(d) {
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  }
+
+  function dateFromKey(key) {
+    const m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(key);
+    if (!m) return null;
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  }
+
+  function addDaysKey(key, deltaDays) {
+    const d = dateFromKey(key);
+    if (!d) return null;
+    d.setDate(d.getDate() + deltaDays);
+    return dateKeyFromDate(d);
+  }
+
+  function ensureHabitsForToday() {
+    ensureHabitItems();
+    const tk = todayKeyLocal();
+    if (state.habits.dateKey !== tk) {
+      state.habits.dateKey = tk;
+      const fresh = {};
+      for (const it of (state.habits.items || [])) fresh[it.id] = false;
+      state.habits.checks = fresh;
+      saveState();
+    }
+  }
+
+  // Seed yesterday as achieved (100%) once if there is no history yet and todayは未達
+  function maybeSeedYesterdayForUserRequest() {
+    const perc = state.habits.dailyPercents || {};
+    const today = todayKeyLocal();
+    const yesterday = addDaysKey(today, -1);
+    const total = Object.values(perc).filter((p) => p === 100).length;
+    const tempStreak = (() => {
+      let start = perc[today] === 100 ? today : yesterday;
+      let k = start, s = 0;
+      while (k && perc[k] === 100) { s++; k = addDaysKey(k, -1); }
+      return s;
+    })();
+    if ((total === 0 && tempStreak === 0) && perc[today] !== 100) {
+      state.habits.dailyPercents[yesterday] = 100;
+      saveState();
+    }
+  }
+
+  function habitsPercent() {
+    const items = state.habits.items || [];
+    if (items.length === 0) return 0;
+    const done = items.filter((it) => !!state.habits.checks?.[it.id]).length;
+    return Math.round((done / items.length) * 100);
+  }
+
+  function recomputeHabitsAchievements() {
+    const tk = state.habits.dateKey;
+    const percent = habitsPercent();
+    // record daily percent
+    state.habits.dailyPercents = state.habits.dailyPercents || {};
+    state.habits.dailyPercents[tk] = percent;
+    // maintain legacy achievedDates for backward compatibility
+    const set = new Set(state.habits.achievedDates);
+    if (percent === 100) set.add(tk); else set.delete(tk);
+    state.habits.achievedDates = Array.from(set);
+  }
+
+  function computeStreak() {
+    const perc = state.habits.dailyPercents || {};
+    const today = todayKeyLocal();
+    let start = today;
+    if (perc[today] !== 100) {
+      // If today is not 100%, count streak ending at yesterday
+      start = addDaysKey(today, -1);
+    }
+    let k = start;
+    let streak = 0;
+    while (k && perc[k] === 100) {
+      streak += 1;
+      k = addDaysKey(k, -1);
+    }
+    return streak;
+  }
+
+  function renderHabits() {
+    ensureHabitsForToday();
+    const percent = habitsPercent();
+
+    const badge = document.getElementById('habits-percent');
+    if (badge) badge.textContent = `${percent}%`;
+
+    const bar = document.getElementById('habits-progress');
+    if (bar) bar.style.width = `${percent}%`;
+
+    const msg = document.getElementById('habits-message');
+    if (msg) {
+      if (percent === 100) msg.textContent = '完璧！自分を褒めよう';
+      else if (percent >= 75) msg.textContent = 'あと少し！この調子';
+      else if (percent >= 50) msg.textContent = '半分クリア。勢いをつけよう';
+      else if (percent >= 25) msg.textContent = 'まずは1つずつ積み上げよう';
+      else msg.textContent = '今日も積み上げよう';
+    }
+
+    const checksCont = document.getElementById('habits-checks');
+    if (checksCont) {
+      const items = state.habits.items || [];
+      checksCont.innerHTML = [
+        ...items.map((it) => {
+          const checked = !!state.habits.checks?.[it.id];
+          return `
+            <div class="habit ${checked ? 'is-done' : ''}" data-habit-id="${escapeAttr(it.id)}">
+              <input class="habit__check" type="checkbox" ${checked ? 'checked' : ''} aria-label="${escapeAttr(it.label)}" />
+              <span class="habit__text">${escapeHtml(it.label)}</span>
+              <span class="habit__actions" aria-label="操作">
+                <button type="button" class="btn btn--ghost btn--xs btn--icon habit__btn js-habit-edit" aria-label="編集" title="編集">✎</button>
+                <button type="button" class="btn btn--ghost btn--xs btn--icon habit__btn js-habit-delete" aria-label="削除" title="削除">×</button>
+              </span>
+            </div>`;
+        }),
+        `
+          <button type="button" class="habit habit--add js-habit-add" aria-label="習慣を追加" title="追加">
+            <span class="habit__add">＋</span>
+          </button>`
+      ].join('');
+    }
+
+    const totalDaysEl = document.getElementById('habits-total-days');
+    if (totalDaysEl) {
+      const perc = state.habits.dailyPercents || {};
+      const total = Object.values(perc).filter((p) => p === 100).length;
+      const displayTotal = (state.habits.overrides && Number.isInteger(state.habits.overrides.totalDays)) ? state.habits.overrides.totalDays : total;
+      totalDaysEl.textContent = String(displayTotal);
+    }
+
+    const streakEl = document.getElementById('habits-streak');
+    if (streakEl) {
+      const computed = computeStreak();
+      const displayStreak = (state.habits.overrides && Number.isInteger(state.habits.overrides.streak)) ? state.habits.overrides.streak : computed;
+      streakEl.textContent = String(displayStreak);
+    }
+
+    // Update weekly stamps
+    renderHabitsWeek();
+  }
+
+  function attachHabitsEvents() {
+    const checksCont = document.getElementById('habits-checks');
+    if (checksCont) {
+      checksCont.addEventListener('change', (e) => {
+        const target = e.target;
+        if (!(target instanceof HTMLInputElement)) return;
+        if (!target.classList.contains('habit__check')) return;
+
+        const card = target.closest('[data-habit-id]');
+        const id = card?.getAttribute('data-habit-id');
+        if (!id) return;
+
+        ensureHabitsForToday();
+        state.habits.checks[id] = !!target.checked;
+        recomputeHabitsAchievements();
+        saveState();
+        renderHabits();
+      });
+
+      checksCont.addEventListener('click', (e) => {
+        const btn = e.target instanceof Element ? e.target.closest('button') : null;
+        if (!btn) return;
+
+        if (btn.classList.contains('js-habit-add')) {
+          const label = prompt('追加する習慣名を入力してください', '');
+          if (label === null) return;
+          const trimmed = label.trim();
+          if (!trimmed) return;
+
+          ensureHabitsForToday();
+          const id = `h_${uid()}`;
+          state.habits.items = state.habits.items || [];
+          state.habits.items.push({ id, label: trimmed });
+          state.habits.checks = state.habits.checks || {};
+          state.habits.checks[id] = false;
+          recomputeHabitsAchievements();
+          saveState();
+          renderHabits();
+          return;
+        }
+
+        const card = btn.closest('[data-habit-id]');
+        const id = card?.getAttribute('data-habit-id');
+        if (!id) return;
+
+        if (btn.classList.contains('js-habit-edit')) {
+          const item = (state.habits.items || []).find((x) => x.id === id);
+          if (!item) return;
+          const next = prompt('習慣名を編集してください', item.label);
+          if (next === null) return;
+          const trimmed = next.trim();
+          if (!trimmed) return;
+          item.label = trimmed;
+          saveState();
+          renderHabits();
+          return;
+        }
+
+        if (btn.classList.contains('js-habit-delete')) {
+          const ok = confirm('この習慣を削除しますか？');
+          if (!ok) return;
+
+          state.habits.items = (state.habits.items || []).filter((x) => x.id !== id);
+          if (state.habits.checks) delete state.habits.checks[id];
+          recomputeHabitsAchievements();
+          saveState();
+          renderHabits();
+        }
+      });
+    }
+
+    // Manual overrides for totals and streak
+    const btnTotal = document.querySelector('.js-edit-habits-total');
+    if (btnTotal) {
+      btnTotal.addEventListener('click', () => {
+        const current = state.habits.overrides?.totalDays;
+        const input = prompt('100%達成日数を入力してください（整数）', current != null ? String(current) : '');
+        if (input === null) return; // cancel
+        const n = Number(input);
+        if (!Number.isInteger(n) || n < 0) {
+          alert('整数の0以上で入力してください');
+          return;
+        }
+        state.habits.overrides = state.habits.overrides || { totalDays: null, streak: null };
+        state.habits.overrides.totalDays = n;
+        saveState();
+        renderHabits();
+      });
+    }
+
+    const btnStreak = document.querySelector('.js-edit-habits-streak');
+    if (btnStreak) {
+      btnStreak.addEventListener('click', () => {
+        const current = state.habits.overrides?.streak;
+        const input = prompt('連続達成日数を入力してください（整数）', current != null ? String(current) : '');
+        if (input === null) return; // cancel
+        const n = Number(input);
+        if (!Number.isInteger(n) || n < 0) {
+          alert('整数の0以上で入力してください');
+          return;
+        }
+        state.habits.overrides = state.habits.overrides || { totalDays: null, streak: null };
+        state.habits.overrides.streak = n;
+        saveState();
+        renderHabits();
+      });
+    }
+  }
+
+  const WEEKDAYS = ['日','月','火','水','木','金','土'];
+
+  function startOfMondayWeek(d) {
+    const date = new Date(d);
+    const day = date.getDay(); // 0..6 (Sun..Sat)
+    const diff = day === 0 ? -6 : 1 - day; // move back to Monday, if Sunday go back 6
+    date.setDate(date.getDate() + diff);
+    date.setHours(0,0,0,0);
+    return date;
+  }
+
+  function renderHabitsWeek() {
+    const cont = document.getElementById('habits-week');
+    if (!cont) return;
+    const perc = state.habits.dailyPercents || {};
+    // Current week Monday -> Sunday
+    const today = dateFromKey(todayKeyLocal());
+    const monday = startOfMondayWeek(today);
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const key = dateKeyFromDate(d);
+      const p = perc[key] ?? 0;
+      const label = `${d.getMonth() + 1}/${d.getDate()}`;
+      days.push({ key, p, label });
+    }
+    cont.innerHTML = days.map((d) => `
+      <div class="stamp ${d.p === 100 ? 'stamp--full' : ''}" title="${d.key}: ${d.p}%">
+        <div class="stamp__fill" style="width:${d.p}%"></div>
+        <div class="stamp__label">${d.label}</div>
+      </div>
+    `).join('');
   }
 
   // Event: add
@@ -536,5 +896,8 @@
 
   // Load saved state and initial render
   loadState();
+  ensureHabitsForToday();
+  maybeSeedYesterdayForUserRequest();
+  attachHabitsEvents();
   render();
 })();

@@ -13,6 +13,45 @@
         <p class="app__subtitle">いま手に持っているタスクを書き込み、終わったものから消していく</p>
       </header>
 
+      <section class="panel panel--habits">
+        <div class="panel__head">
+          <h2>毎日の習慣</h2>
+          <span id="habits-percent" class="count-badge">0%</span>
+        </div>
+        <div class="habits">
+          <div class="habits__progress">
+            <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div id="habits-progress" class="progress__fill" style="width: 0%"></div>
+            </div>
+            <div id="habits-message" class="habits__message">今日も積み上げよう</div>
+          </div>
+
+          <div id="habits-checks" class="habits__checks" role="group" aria-label="毎日の習慣チェック"></div>
+
+          <div class="habits__stats">
+            <div class="habit-stat">
+              <div class="habit-stat__label">100%達成日数</div>
+              <div class="habit-stat__row">
+                <div id="habits-total-days" class="habit-stat__value">0</div>
+                <button type="button" class="btn btn--ghost btn--xs btn--icon js-edit-habits-total" aria-label="達成日数を編集" title="編集">✎</button>
+              </div>
+            </div>
+            <div class="habit-stat">
+              <div class="habit-stat__label">連続達成日数</div>
+              <div class="habit-stat__row">
+                <div id="habits-streak" class="habit-stat__value">0</div>
+                <button type="button" class="btn btn--ghost btn--xs btn--icon js-edit-habits-streak" aria-label="連続達成日数を編集" title="編集">✎</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="habits__week">
+            <div class="habits__week-head">直近7日</div>
+            <div id="habits-week" class="habits__stamps" aria-label="直近7日の達成度"></div>
+          </div>
+        </div>
+      </section>
+
       <section class="add-task">
         <form id="add-form" autocomplete="off">
           <label class="sr-only" for="task-input">タスク名</label>
